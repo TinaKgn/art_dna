@@ -1,6 +1,14 @@
-scikit-learn
+# Backend dependencies
 fastapi
 uvicorn
-python-dotenv
 python-multipart
+
+# Frontend dependencies
 streamlit
+requests
+pillow
+
+# Shared
+python-dotenv
+scikit-learn
+
