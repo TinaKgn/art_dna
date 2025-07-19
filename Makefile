@@ -14,10 +14,10 @@ run-frontend:
 # === TRAINING ===
 
 build-dataset:
-	python model/build_dataset.py --csv_path raw_data/labeled_data_expanded.csv
+	python model/build_dataset.py
 
 train-model:
-	python model/train_model.py --csv_path raw_data/labeled_data_expanded.csv --model_path model/art_style_classifier.keras
+	python model/train_model.py
 
 # === HELP ===
 

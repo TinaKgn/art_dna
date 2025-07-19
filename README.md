@@ -2,8 +2,27 @@
 
 Machine learning project to predict art styles from paintings.
 
-## Setup
+## Setup & Run
 
-1. Create virtual environment: `pyenv virtualenv 3.10.6 art_dna`
-2. Copy `.env.sample` to `.env` and fill in your GCP details
-3. Install dependencies: `pip install -e .`
+```bash
+# Install dependencies
+make install
+
+# Create dataset (first time only)
+make build-dataset
+
+# Run backend (terminal 1)
+make run-backend
+
+# Run frontend (terminal 2)
+make run-frontend
+```
+
+Open `http://localhost:8501` to upload images and predict art styles.
+
+## Commands
+
+```bash
+make help          # Show all commands
+make train-model   # Retrain model (delete existing model first)
+```
