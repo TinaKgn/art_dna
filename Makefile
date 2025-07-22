@@ -6,8 +6,9 @@ default:
 help:
 	@echo "Usage:"
 	@echo "  make install          Install all dependencies"
-	@echo "  make run-backend      Run FastAPI backend (http://localhost:8000)"
-	@echo "  make run-frontend     Run Streamlit frontend (http://localhost:8501)"
+	@echo "  make run-backend      Run FastAPI backend with local model"
+	@echo "  make run-backend-gcs  Run FastAPI backend with GCS model"
+	@echo "  make run-frontend     Run Streamlit frontend"
 	@echo "  make build-dataset    Build image dataset from CSV"
 	@echo "  make train-model      Train and save VGG16 model"
 	@echo "  make evaluate-model   Evaluate model on test set"
@@ -21,6 +22,9 @@ install:
 
 run-backend:
 	uvicorn api.fast:app --reload --port 8000
+
+run-backend-gcs:
+	USE_GCS=true uvicorn api.fast:app --reload --port 8000
 
 run-frontend:
 	streamlit run frontend/app.py
