@@ -1,4 +1,3 @@
-
 import pandas as pd
 
 kids_data = [
@@ -8,7 +7,7 @@ kids_data = [
         "time_period": "Early 1900s",
         "key_artists": '["Kandinsky (color wizard)", "Mondrian (loved squares)", "Malevich (shape master)"]',
         "visual_elements": '["Bright blocks of color", "Simple shapes", "Fun patterns", "Lots of imagination"]',
-        "philosophy": "Using colors and shapes to share feelings and ideas!"
+        "philosophy": "Using colors and shapes to share feelings and ideas!",
     },
     {
         "genre": "Art Nouveau",
@@ -16,7 +15,7 @@ kids_data = [
         "time_period": "Late 1800s - Early 1900s",
         "key_artists": '["Alphonse Mucha (flower artist)", "Gustav Klimt (golden painter)", "Hector Guimard (cool buildings)"]',
         "visual_elements": '["Flowy lines", "Flowers and leaves", "Swirly shapes", "Pretty decorations"]',
-        "philosophy": "Making everyday things look beautiful and special."
+        "philosophy": "Making everyday things look beautiful and special.",
     },
     {
         "genre": "Baroque",
@@ -24,7 +23,7 @@ kids_data = [
         "time_period": "1600s to 1700s",
         "key_artists": '["Caravaggio (drama king)", "Rubens (color master)", "Bernini (sculpture genius)"]',
         "visual_elements": '["Shiny gold", "Strong light and dark", "Moving figures", "Lots of details"]',
-        "philosophy": "Making art that feels like a big, exciting adventure!"
+        "philosophy": "Making art that feels like a big, exciting adventure!",
     },
     {
         "genre": "Byzantine Art",
@@ -32,7 +31,7 @@ kids_data = [
         "time_period": "300s to 1400s",
         "key_artists": '["Unknown Byzantine artists", "Saint Luke (legend says he painted some)"]',
         "visual_elements": '["Gold backgrounds", "Flat people", "Lots of symbols", "Mosaics"]',
-        "philosophy": "Showing stories from religion to inspire people."
+        "philosophy": "Showing stories from religion to inspire people.",
     },
     {
         "genre": "Cubism",
@@ -40,7 +39,7 @@ kids_data = [
         "time_period": "Early 1900s",
         "key_artists": '["Picasso (shape breaker)", "Braque (puzzle artist)", "Juan Gris"]',
         "visual_elements": '["Puzzle pieces", "Lots of shapes", "Different viewpoints", "Simple colors"]',
-        "philosophy": "Showing things from many sides at the same time!"
+        "philosophy": "Showing things from many sides at the same time!",
     },
     {
         "genre": "Expressionism",
@@ -48,7 +47,7 @@ kids_data = [
         "time_period": "Early 1900s",
         "key_artists": '["Kandinsky (loved colors!)", "Munch (painted The Scream)", "Kirchner"]',
         "visual_elements": '["Bright, crazy colors", "Wobbly, stretched shapes", "Thick paint blobs", "Zigzag lines"]',
-        "philosophy": "Painting feelings, not just what you see! 🌈"
+        "philosophy": "Painting feelings, not just what you see! 🌈",
     },
     {
         "genre": "Impressionism",
@@ -56,7 +55,7 @@ kids_data = [
         "time_period": "Late 1800s",
         "key_artists": '["Monet (light master)", "Renoir (people painter)", "Degas (dance artist)"]',
         "visual_elements": '["Light brush strokes", "Soft colors", "Outdoor scenes", "Shiny light spots"]',
-        "philosophy": "Capturing moments as they happen!"
+        "philosophy": "Capturing moments as they happen!",
     },
     {
         "genre": "Mannerism",
@@ -64,7 +63,7 @@ kids_data = [
         "time_period": "1500s",
         "key_artists": '["El Greco (stretchy figures)", "Parmigianino (pose master)", "Pontormo"]',
         "visual_elements": '["Tall, twisty people", "Fancy poses", "Bright colors", "Strange perspectives"]',
-        "philosophy": "Making art that’s elegant and dramatic!"
+        "philosophy": "Making art that’s elegant and dramatic!",
     },
     {
         "genre": "Muralism",
@@ -72,7 +71,7 @@ kids_data = [
         "time_period": "1900s",
         "key_artists": '["Diego Rivera (wall painter)", "José Orozco (storyteller)", "David Siqueiros (bold artist)"]',
         "visual_elements": '["Big pictures", "Strong outlines", "People and stories", "Bright colors"]',
-        "philosophy": "Using art to share important messages for everyone."
+        "philosophy": "Using art to share important messages for everyone.",
     },
     {
         "genre": "Neoplasticism",
@@ -80,7 +79,7 @@ kids_data = [
         "time_period": "1910s to 1930s",
         "key_artists": '["Mondrian (square lover)", "Van Doesburg"]',
         "visual_elements": '["Squares and rectangles", "Red, blue, yellow", "Straight lines", "Balanced look"]',
-        "philosophy": "Making simple shapes and colors that feel just right."
+        "philosophy": "Making simple shapes and colors that feel just right.",
     },
     {
         "genre": "Pop Art",
@@ -88,7 +87,7 @@ kids_data = [
         "time_period": "1950s to 1970s",
         "key_artists": '["Andy Warhol (pop king)", "Roy Lichtenstein (comic artist)", "Claes Oldenburg"]',
         "visual_elements": '["Bright colors", "Bold lines", "Repetitions", "Famous images"]',
-        "philosophy": "Making everyday things into cool art!"
+        "philosophy": "Making everyday things into cool art!",
     },
     {
         "genre": "Primitivism",
@@ -96,7 +95,7 @@ kids_data = [
         "time_period": "Late 1800s - Early 1900s",
         "key_artists": '["Gauguin (tropical painter)", "Picasso", "Matisse"]',
         "visual_elements": '["Simple shapes", "Bright colors", "Symbols", "Rough textures"]',
-        "philosophy": "Going back to simple and powerful art styles."
+        "philosophy": "Going back to simple and powerful art styles.",
     },
     {
         "genre": "Realism",
@@ -104,7 +103,7 @@ kids_data = [
         "time_period": "1800s",
         "key_artists": '["Courbet (real life painter)", "Millet (farm scenes)", "Manet"]',
         "visual_elements": '["Real details", "Natural colors", "Everyday scenes", "True-to-life"]',
-        "philosophy": "Showing the world as it really is."
+        "philosophy": "Showing the world as it really is.",
     },
     {
         "genre": "Renaissance",
@@ -112,7 +111,7 @@ kids_data = [
         "time_period": "1400s to 1500s",
         "key_artists": '["Leonardo da Vinci (genius)", "Michelangelo (sculptor)", "Raphael (master painter)"]',
         "visual_elements": '["Perfect shapes", "3D perspective", "Realistic people", "Light and shadows"]',
-        "philosophy": "Bringing back old ideas of beauty and balance."
+        "philosophy": "Bringing back old ideas of beauty and balance.",
     },
     {
         "genre": "Romanticism",
@@ -120,7 +119,7 @@ kids_data = [
         "time_period": "1800s",
         "key_artists": '["Caspar David Friedrich (nature lover)", "Delacroix (drama painter)", "Goya"]',
         "visual_elements": '["Dramatic scenes", "Bright colors", "Wild nature", "Strong emotions"]',
-        "philosophy": "Showing big feelings and the power of nature."
+        "philosophy": "Showing big feelings and the power of nature.",
     },
     {
         "genre": "Suprematism",
@@ -128,7 +127,7 @@ kids_data = [
         "time_period": "1910s",
         "key_artists": '["Kazimir Malevich (shape artist)"]',
         "visual_elements": '["Simple shapes", "Few colors", "Flat shapes", "Abstract"]',
-        "philosophy": "Art that’s about feeling, not pictures."
+        "philosophy": "Art that’s about feeling, not pictures.",
     },
     {
         "genre": "Surrealism",
@@ -136,7 +135,7 @@ kids_data = [
         "time_period": "1920s to 1950s",
         "key_artists": '["Salvador Dalí (dream painter)", "René Magritte (mysterious scenes)", "Max Ernst"]',
         "visual_elements": '["Dreamlike scenes", "Strange combinations", "Funny or scary images", "Symbols"]',
-        "philosophy": "Showing what’s inside your imagination and dreams."
+        "philosophy": "Showing what’s inside your imagination and dreams.",
     },
     {
         "genre": "Symbolism",
@@ -144,8 +143,8 @@ kids_data = [
         "time_period": "Late 1800s to early 1900s",
         "key_artists": '["Gustave Moreau", "Odilon Redon", "Pierre Puvis de Chavannes"]',
         "visual_elements": '["Magical themes", "Soft colors", "Mysterious pictures", "Secret symbols"]',
-        "philosophy": "Using pictures to tell stories about feelings and magic."
-    }
+        "philosophy": "Using pictures to tell stories about feelings and magic.",
+    },
 ]
 df = pd.DataFrame(kids_data)
 df.to_csv("kids_data_18_genres.csv", index=False)
