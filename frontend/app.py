@@ -41,45 +41,65 @@ def apply_theme(mode: str = "adult") -> None:
     if mode == "kid":
         st.markdown(
             """
-            <style>
-            @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
-            :root {
-              --app-font: 'Comic Sans MS', 'Comic Sans', 'Comic Neue', cursive, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, sans-serif;
-              /* Light mode */
-              --kid-bg: #F5FAFF; /* very light sky blue */
-              --kid-fg: #1F2937; /* dark slate for readable text */
-              /* Dark mode */
-              --kid-bg-dark: #141C24; /* slightly lighter dark slate with blue hue */
-              --kid-fg-dark: #E6EAF2; /* soft light text */
-            }
-            html, body, .stApp, [class^="css"], [data-testid="stMarkdownContainer"] { font-family: var(--app-font) !important; }
-            /* Use Streamlit theme CSS variables for text color to guarantee contrast */
-            .stApp, [data-testid="stMarkdownContainer"], .stMarkdown, .stMarkdown *, .stTabs [role="tab"] {
-              color: var(--text-color) !important;
-            }
-            /* Kids backgrounds driven by detected theme class applied via JS */
-            .kid-light .stApp { background-color: var(--kid-bg) !important; }
-            .kid-dark  .stApp { background-color: var(--kid-bg-dark) !important; }
-            h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 { font-family: var(--app-font) !important; font-weight: 700; }
-            </style>
-            """,
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+:root{
+  --app-font:'Comic Sans MS','Comic Sans','Comic Neue',cursive,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;
+  --kid-bg:#F5FAFF; --kid-fg:#1F2937;
+  --kid-bg-dark:#141C24; --kid-fg-dark:#E6EAF2;
+}
+html,body,.stApp,[class^="css"],[data-testid="stMarkdownContainer"]{ font-family:var(--app-font)!important; }
+.stApp,[data-testid="stMarkdownContainer"],.stMarkdown,.stMarkdown *,.stTabs [role="tab"]{ color:var(--text-color)!important; }
+
+/* Unconditional kids background (this block only renders in kid mode) */
+body,
+#root,
+#root > div:first-child,
+[data-testid="stApp"],
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] > .main{
+  background:var(--kid-bg)!important;
+  background-color:var(--kid-bg)!important;
+}
+/* Dark */
+@media (prefers-color-scheme: dark){
+  body,
+  #root,
+  #root > div:first-child,
+  [data-testid="stApp"],
+  .stApp,
+  [data-testid="stAppViewContainer"],
+  [data-testid="stAppViewContainer"] > .main{
+    background:var(--kid-bg-dark)!important;
+    background-color:var(--kid-bg-dark)!important;
+  }
+}
+
+h1,h2,h3,h4,.stMarkdown h1,.stMarkdown h2,.stMarkdown h3,.stMarkdown h4{ font-weight:700; }
+</style>
+""",
             unsafe_allow_html=True,
         )
-        # Detect current Streamlit theme (light/dark) by reading computed color-scheme and set a class
         st.markdown(
             """
-            <script>
-            (function(){
-              try {
-                const cs = getComputedStyle(document.body).getPropertyValue('color-scheme');
-                const textVar = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
-                const isDark = (cs && cs.includes('dark')) || (textVar && (textVar.trim().toLowerCase()==='#fafafa' || textVar.trim().startsWith('rgb(250')));
-                document.documentElement.classList.remove('kid-dark','kid-light');
-                document.documentElement.classList.add(isDark ? 'kid-dark' : 'kid-light');
-              } catch(e) { /* no-op */ }
-            })();
-            </script>
-            """,
+<script>
+(function () {
+  function setKidTheme() {
+    try {
+      const cs = (getComputedStyle(document.body).getPropertyValue('color-scheme') || '').toLowerCase();
+      const isDark = cs.includes('dark');
+      const root = document.documentElement;
+      root.classList.toggle('kid-dark', isDark);
+      root.classList.toggle('kid-light', !isDark);
+    } catch (e) {}
+  }
+  setKidTheme();
+  // React/Streamlit re-renders: re-evaluate when body attributes change
+  new MutationObserver(setKidTheme).observe(document.body, { attributes: true, attributeFilter: ['style','class'] });
+})();
+</script>
+""",
             unsafe_allow_html=True,
         )
     else:
@@ -92,6 +112,17 @@ def apply_theme(mode: str = "adult") -> None:
             h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 { font-family: var(--app-font) !important; font-weight: 700; }
             </style>
             """,
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            """
+<script>
+try {
+  const root = document.documentElement;
+  root.classList.remove('kid-dark','kid-light');
+} catch (e) {}
+</script>
+""",
             unsafe_allow_html=True,
         )
 
