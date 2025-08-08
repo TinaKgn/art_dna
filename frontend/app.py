@@ -97,15 +97,10 @@ def concepts_bar_chart(concepts: list):
     sorted_data = sorted(zip(labels, activations), key=lambda x: x[1])
     labels, activations = zip(*sorted_data)
 
-    # Create varied blue-green gradient colors
-    colors = [
-        "#2E7D32",  # Dark green
-        "#43A047",  # Green
-        "#00ACC1",  # Cyan
-        "#039BE5",  # Light blue
-        "#1976D2",  # Blue
-        "#1565C0",  # Dark blue
-    ][: len(labels)]
+    # Create single-hue blue palette with varying intensity
+    n = len(labels)
+    positions = np.linspace(0.35, 0.9, n)  # trim extremes for readability
+    colors = sample_colorscale("Blues", positions, colortype="rgb")
 
     # Create horizontal bar chart
     fig = go.Figure(
