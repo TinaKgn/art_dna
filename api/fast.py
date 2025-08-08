@@ -270,7 +270,10 @@ def generate_gradcam_image(img_tensor, target_class, target_type="style"):
         # For style, use regular model forward
         targets = [ClassifierOutputTarget(target_class)]
         grayscale_cam = cam(
-            input_tensor=img_tensor, targets=targets, aug_smooth=True, eigen_smooth=True
+            input_tensor=img_tensor,
+            targets=targets,
+            aug_smooth=False,
+            eigen_smooth=False,
         )
     else:
         # For concept, modify model forward temporarily
@@ -283,7 +286,10 @@ def generate_gradcam_image(img_tensor, target_class, target_type="style"):
         cbm_model.forward = concept_forward
         targets = [ClassifierOutputTarget(target_class)]
         grayscale_cam = cam(
-            input_tensor=img_tensor, targets=targets, aug_smooth=True, eigen_smooth=True
+            input_tensor=img_tensor,
+            targets=targets,
+            aug_smooth=False,
+            eigen_smooth=False,
         )
         cbm_model.forward = original_forward  # Restore
 
