@@ -10,6 +10,90 @@ import streamlit.components.v1 as components
 from urllib.parse import urlparse, quote
 import base64
 from PIL import Image, ImageOps
+import time
+
+
+# === Theming and copy (adult-only scaffolding) ===
+COPY = {
+    "adult": {
+        "art_style": "Art Style",
+        "visual_elements": "Visual Elements",
+        "similar_paintings": "Similar Paintings",
+        "model_activation": "Model Activation",
+        "tagline": "Discover the artistic heritage of a painting",
+        "upload_title": "Upload Your Artwork",
+        "analyze_cta": "Analyze art style",
+    },
+    "kid": {
+        "art_style": "Art Style Match",
+        "visual_elements": "What Pops Out",
+        "similar_paintings": "Paintings That Look Like This",
+        "model_activation": "How The Model Sees It",
+        "tagline": "Let's explore this painting!",
+        "upload_title": "Pick a Picture",
+        "analyze_cta": "Find the Style",
+    },
+}
+
+
+def apply_theme(mode: str = "adult") -> None:
+    """Inject CSS/fonts for the active theme (adult or kid)."""
+    if mode == "kid":
+        st.markdown(
+            """
+            <style>
+            @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+            :root {
+              --app-font: 'Comic Sans MS', 'Comic Sans', 'Comic Neue', cursive, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, sans-serif;
+              /* Light mode */
+              --kid-bg: #F5FAFF; /* very light sky blue */
+              --kid-fg: #1F2937; /* dark slate for readable text */
+              /* Dark mode */
+              --kid-bg-dark: #141C24; /* slightly lighter dark slate with blue hue */
+              --kid-fg-dark: #E6EAF2; /* soft light text */
+            }
+            html, body, .stApp, [class^="css"], [data-testid="stMarkdownContainer"] { font-family: var(--app-font) !important; }
+            /* Use Streamlit theme CSS variables for text color to guarantee contrast */
+            .stApp, [data-testid="stMarkdownContainer"], .stMarkdown, .stMarkdown *, .stTabs [role="tab"] {
+              color: var(--text-color) !important;
+            }
+            /* Kids backgrounds driven by detected theme class applied via JS */
+            .kid-light .stApp { background-color: var(--kid-bg) !important; }
+            .kid-dark  .stApp { background-color: var(--kid-bg-dark) !important; }
+            h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 { font-family: var(--app-font) !important; font-weight: 700; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        # Detect current Streamlit theme (light/dark) by reading computed color-scheme and set a class
+        st.markdown(
+            """
+            <script>
+            (function(){
+              try {
+                const cs = getComputedStyle(document.body).getPropertyValue('color-scheme');
+                const textVar = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+                const isDark = (cs && cs.includes('dark')) || (textVar && (textVar.trim().toLowerCase()==='#fafafa' || textVar.trim().startsWith('rgb(250')));
+                document.documentElement.classList.remove('kid-dark','kid-light');
+                document.documentElement.classList.add(isDark ? 'kid-dark' : 'kid-light');
+              } catch(e) { /* no-op */ }
+            })();
+            </script>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """
+            <style>
+            @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap');
+            :root { --app-font: 'Merriweather', Georgia, 'Times New Roman', Times, serif; }
+            html, body, .stApp, [class^="css"], [data-testid="stMarkdownContainer"] { font-family: var(--app-font) !important; }
+            h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 { font-family: var(--app-font) !important; font-weight: 700; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def plotly_rgb_to_hex(rgb_str):
@@ -83,7 +167,7 @@ def radar_barpolar(predictions, top_k=6):
     return color_map
 
 
-def concepts_bar_chart(concepts: list):
+def concepts_bar_chart(concepts: list, mode: str = "adult"):
     """Display concepts as a horizontal bar chart"""
     if not concepts:
         st.info("No visual elements detected")
@@ -98,10 +182,21 @@ def concepts_bar_chart(concepts: list):
     sorted_data = sorted(zip(labels, activations), key=lambda x: x[1])
     labels, activations = zip(*sorted_data)
 
-    # Create single-hue blue palette with varying intensity
+    # Palette by mode: adult = single-hue blues; kid = rainbow
     n = len(labels)
-    positions = np.linspace(0.35, 0.9, n)  # trim extremes for readability
-    colors = sample_colorscale("Blues", positions, colortype="rgb")
+    if mode == "kid":
+        # Pastel rainbow: red, orange, yellow, blue, violet (cycled)
+        pastel = [
+            "#FF6B6B",  # red
+            "#FFA94D",  # orange
+            "#FFE066",  # yellow
+            "#74C0FC",  # blue
+            "#B197FC",  # violet
+        ]
+        colors = [pastel[i % len(pastel)] for i in range(n)]
+    else:
+        positions = np.linspace(0.35, 0.9, n)  # trim extremes for readability
+        colors = sample_colorscale("Blues", positions, colortype="rgb")
 
     # Create horizontal bar chart
     fig = go.Figure(
@@ -296,28 +391,31 @@ main_container = st.container()
 
 with main_container:
     st.title("Art-DNA 🎨")  # Main app title
-    # Global font: Merriweather (elegant serif)
-    st.markdown(
-        """
-        <style>
-        @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap');
-        :root { --app-font: 'Merriweather', Georgia, 'Times New Roman', Times, serif; }
-        html, body, .stApp, [class^="css"], [data-testid="stMarkdownContainer"] { font-family: var(--app-font) !important; }
-        h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 { font-family: var(--app-font) !important; font-weight: 700; }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<h4 style='font-size: 1.4rem; font-weight: 400; font-style: italic;'>Discover the artistic heritage of a painting</h4>",
-        unsafe_allow_html=True,
-    )
+    # Apply default theme before toggle to avoid FOUC
+    apply_theme("adult")
 
-    # === Kid Version checkbox ===
-    kid_mode = st.checkbox("Kid Mode")
+    # Tagline placeholder above selectors
+    tagline_placeholder = st.empty()
+
+    # === Audience and theme selectors ===
+    sel_col1, sel_col2 = st.columns([1, 1])
+    with sel_col1:
+        audience_choice = st.radio(
+            "audience",
+            ["adults", "kids"],
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+    active_mode = "kid" if audience_choice == "kids" else "adult"
+    # Re-apply theme relying on Streamlit theme (no manual override)
+    apply_theme(active_mode)
+    tagline_placeholder.markdown(
+        f"<h4 style='font-size: 1.3rem; font-weight: 500; font-style: italic; margin: 0.25rem 0 0.75rem 0;'>{COPY[active_mode]['tagline']}</h4>",
+        unsafe_allow_html=True,
+    )
 
     # === PROMINENT UPLOAD SECTION ===
-    st.markdown("### Upload Your Artwork")
+    st.markdown(f"### {COPY[active_mode]['upload_title']}")
 
     # Use left half of screen for upload section
     upload_col, _ = st.columns([1, 1])
@@ -360,7 +458,7 @@ with main_container:
         if uploaded_file:
             st.markdown("")  # Small spacing
             analyze_clicked = st.button(
-                "Analyze art style",
+                COPY[active_mode]["analyze_cta"],
                 type="primary",
                 use_container_width=True,
             )
@@ -427,7 +525,7 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
         # === DISPLAY PREDICTIONS (inside right column) ===
         if "predictions" in st.session_state:
             predictions = st.session_state["predictions"]
-            st.markdown("### Art Style")
+            st.markdown(f"### {COPY[active_mode]['art_style']}")
 
             # Get predicted genres (score >= 1.0) for buttons, sorted by score (highest first)
             predicted_genres = {k: v for k, v in predictions.items() if v >= 1.0}
@@ -436,7 +534,7 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
             )
 
             # Fetch descriptions for predicted genres
-            audience = "kid" if kid_mode else "adult"
+            audience = "kid" if active_mode == "kid" else "adult"
             descriptions = fetch_genre_descriptions(
                 list(predicted_genres_sorted.keys()), audience=audience
             )
@@ -460,17 +558,15 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
                         else "secondary"
                     )
 
-                    # Create button with unique key
+                    # Create button and check if it was clicked
                     if st.button(
                         f"{genre} ({score:.2f})",
                         key=f"genre_btn_{genre}",
                         type=button_type,
                         use_container_width=True,
                     ):
-                        # Update selected genre when clicked
-                        if st.session_state.get("selected_genre") != genre:
-                            st.session_state["selected_genre"] = genre
-                            st.rerun()
+                        st.session_state["selected_genre"] = genre
+                        st.rerun()
 
                 selected_genre = st.session_state["selected_genre"]
 
@@ -481,16 +577,30 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
                 philosophy = data.get("philosophy", "")
                 artists = ", ".join(data.get("key_artists", []))
 
-                st.session_state[
-                    "selected_description"
-                ] = f"""
+                # Different headers for adult vs kid mode
+                if active_mode == "adult":
+                    st.session_state[
+                        "selected_description"
+                    ] = f"""
 **Description:** {desc}
 
-**Popular during:** {time_period}
+**Time period:** {time_period}
 
 **Key artists:** {artists}
 
-**What it's about:** {philosophy}
+**Philosophy:** {philosophy}
+"""
+                else:  # kids mode
+                    st.session_state[
+                        "selected_description"
+                    ] = f"""
+**What it's about:** {desc}
+
+**When did it happen:** {time_period}
+
+**Big artists:** {artists}
+
+**Think about:** {philosophy}
 """
 
             with desc_col:
@@ -502,12 +612,12 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
 
             # Show Visual Elements section (tighter spacing)
             st.markdown(
-                "<h3 style='margin: 0.25rem 0 0.5rem'>Visual Elements</h3>",
+                f"<h3 style='margin: 0.25rem 0 0.5rem'>{COPY[active_mode]['visual_elements']}</h3>",
                 unsafe_allow_html=True,
             )
             concepts = st.session_state.get("concepts", [])
             if concepts:
-                concepts_bar_chart(concepts)
+                concepts_bar_chart(concepts, mode=active_mode)
             else:
                 st.info("No visual elements detected")
 
@@ -516,7 +626,7 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
             similar_images = st.session_state["similar_images"]
             if similar_images:
                 st.markdown(
-                    "<h3 style='margin: 0.25rem 0 0.75rem'>Similar Paintings</h3>",
+                    f"<h3 style='margin: 0.25rem 0 0.75rem'>{COPY[active_mode]['similar_paintings']}</h3>",
                     unsafe_allow_html=True,
                 )
                 cols = st.columns(5)
@@ -539,7 +649,7 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
         # === MODEL ACTIVATION (Grad-CAM) ===
         # Title with ultra-tight spacing to tabs
         st.markdown(
-            "<h3 id='model-activation' style='margin:0;padding:0'>Model Activation</h3>",
+            f"<h3 id='model-activation' style='margin:0;padding:0'>{COPY[active_mode]['model_activation']}</h3>",
             unsafe_allow_html=True,
         )
         # Slightly strengthen tab labels and soften numeric scores in headings
@@ -562,7 +672,12 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
             """,
             unsafe_allow_html=True,
         )
-        tabs = st.tabs(["Art Style", "Visual Elements"])
+        tabs = st.tabs(
+            [
+                f"{COPY[active_mode]['art_style']}",
+                f"{COPY[active_mode]['visual_elements']}",
+            ]
+        )
 
         session_id = st.session_state.get("session_id")
         used_api_url = st.session_state.get("used_url")
@@ -577,25 +692,29 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
                 if current_style:
                     cache_key = f"style::{session_id}::{current_style}"
                     img_bytes = st.session_state["gradcam_cache"].get(cache_key)
+
                     if img_bytes is None:
-                        img_bytes = fetch_gradcam_image(
-                            session_id, "style", current_style, used_api_url
-                        )
-                        if img_bytes:
-                            st.session_state["gradcam_cache"][cache_key] = img_bytes
+                        with st.spinner("Loading style heatmap..."):
+                            img_bytes = fetch_gradcam_image(
+                                session_id, "style", current_style, used_api_url
+                            )
+                            if img_bytes:
+                                st.session_state["gradcam_cache"][cache_key] = img_bytes
+
                     if img_bytes:
-                        # Title above image (smaller) with softer score
-                        style_score = st.session_state.get("predictions", {}).get(
-                            current_style, 0
-                        )
-                        st.markdown(
-                            f"<div class='model-activation-title'>{current_style} "
-                            f"<span class='score'>({style_score:.2f})</span></div>",
-                            unsafe_allow_html=True,
-                        )
+                        # Create a 2-column layout to get half width like Visual Elements
                         _col1, _col2 = st.columns(2)
                         with _col1:
-                            # Render at half the width of the right column
+                            # Title above image (like Visual Elements)
+                            style_score = st.session_state.get("predictions", {}).get(
+                                current_style, 0
+                            )
+                            st.markdown(
+                                f"<div class='model-activation-title'>{current_style} "
+                                f"<span class='score'>({style_score:.2f})</span></div>",
+                                unsafe_allow_html=True,
+                            )
+                            # Render at half the width using container width within column
                             st.image(img_bytes, use_container_width=True)
                     else:
                         st.info("Style heatmap unavailable.")
@@ -617,24 +736,28 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
                             display_name = concept_name.replace("_", " ").title()
                             cache_key = f"concept::{session_id}::{concept_name}"
                             img_bytes = st.session_state["gradcam_cache"].get(cache_key)
-                            if img_bytes is None:
-                                img_bytes = fetch_gradcam_image(
-                                    session_id,
-                                    "concept",
-                                    concept_name,
-                                    used_api_url,
-                                )
-                                if img_bytes:
-                                    st.session_state["gradcam_cache"][
-                                        cache_key
-                                    ] = img_bytes
                             st.markdown(
                                 f"<div class='concept-title'>{display_name} "
                                 f"<span class='score'>({c.get('activation', 0):.2f})</span></div>",
                                 unsafe_allow_html=True,
                             )
+                            concept_placeholder = st.empty()
+                            if img_bytes is None:
+                                with st.spinner("Loading concept heatmap..."):
+                                    img_bytes = fetch_gradcam_image(
+                                        session_id,
+                                        "concept",
+                                        concept_name,
+                                        used_api_url,
+                                    )
+                                    if img_bytes:
+                                        st.session_state["gradcam_cache"][
+                                            cache_key
+                                        ] = img_bytes
                             if img_bytes:
-                                st.image(img_bytes, use_container_width=True)
+                                concept_placeholder.image(
+                                    img_bytes, use_container_width=True
+                                )
                             else:
                                 st.info("Heatmap unavailable.")
                 else:
