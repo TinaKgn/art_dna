@@ -1,5 +1,4 @@
 # === Import required libraries ===
-import os  # Used to read environment variables
 import streamlit as st  # Main library to build the web app UI
 import requests  # To send HTTP requests to the backend API
 import io  # To read uploaded image data as bytes
@@ -8,6 +7,8 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.colors import sample_colorscale
 import streamlit.components.v1 as components
+from urllib.parse import urlparse, quote
+import base64
 
 
 def plotly_rgb_to_hex(rgb_str):
@@ -127,8 +128,8 @@ def concepts_bar_chart(concepts: list):
             gridcolor="rgba(0,0,0,0.1)",
         ),
         yaxis=dict(title="", tickfont=dict(size=12)),
-        height=250,  # Reduced height
-        margin=dict(l=10, r=10, t=10, b=15),  # Reduced bottom margin
+        height=210,  # Further reduced height
+        margin=dict(l=6, r=6, t=0, b=0),  # Remove extra space around chart
         showlegend=False,
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
@@ -195,7 +196,7 @@ def send_image_to_api(image_bytes, filename, mime, primary_url, fallback_url):
                 and response.headers.get("content-type") == "application/json"
             ):
                 return response.json(), url  # Return result if successful
-        except Exception as e:
+        except requests.RequestException:
             pass  # Try next URL
     return None, None  # Return nothing if both fail
 
@@ -213,6 +214,54 @@ def call_session_api(session_id, primary_url, fallback_url):
         if url == primary_url:
             st.warning(f"Primary API ({url}) failed. Trying fallback...")
     return None, None
+
+
+# === Grad-CAM fetch helper ===
+def _api_root(url: str) -> str:
+    try:
+        parsed = urlparse(url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+    except Exception:
+        return ""
+
+
+def fetch_gradcam_image(session_id, kind, name, used_api_url):
+    """Fetch Grad-CAM image bytes for style or concept, trying used, primary, then fallback hosts."""
+    roots = []
+    if used_api_url:
+        roots.append(_api_root(used_api_url))
+    roots.append(_api_root(API_URL_PRIMARY))
+    roots.append(_api_root(API_URL_FALLBACK))
+
+    # Deduplicate while preserving order
+    seen = set()
+    unique_roots = []
+    for r in roots:
+        if r and r not in seen:
+            unique_roots.append(r)
+            seen.add(r)
+
+    for root in unique_roots:
+        try:
+            url = f"{root}/gradcam/{session_id}/{kind}/{quote(name)}"
+            resp = requests.get(url, timeout=30)
+            if not resp.ok or not resp.content:
+                continue
+            content_type = resp.headers.get("content-type", "").lower()
+            if content_type.startswith("image/"):
+                return resp.content
+            if content_type.startswith("application/json"):
+                data = resp.json()
+                data_url = data.get("gradcam_image")
+                if isinstance(data_url, str) and data_url.startswith("data:image"):
+                    try:
+                        b64 = data_url.split(",", 1)[1]
+                        return base64.b64decode(b64)
+                    except Exception:
+                        continue
+        except requests.RequestException:
+            continue
+    return None
 
 
 # === App version displayed at the bottom of the UI ===
@@ -260,6 +309,7 @@ with main_container:
                 st.session_state.pop("similar_images", None)
                 st.session_state.pop("session_id", None)
                 st.session_state.pop("selected_genre", None)
+                st.session_state.pop("gradcam_cache", None)
 
             st.session_state["uploaded_file"] = uploaded
             st.session_state["image_bytes"] = uploaded.read()
@@ -415,37 +465,147 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
                 else:
                     st.info("Click on a genre button to see details")
 
-            # Show Visual Elements section
-            st.markdown("### Visual Elements")
+            # Show Visual Elements section (tighter spacing)
+            st.markdown(
+                "<h3 style='margin: 0.25rem 0 0.5rem'>Visual Elements</h3>",
+                unsafe_allow_html=True,
+            )
             concepts = st.session_state.get("concepts", [])
             if concepts:
                 concepts_bar_chart(concepts)
             else:
                 st.info("No visual elements detected")
 
-        # === DISPLAY SIMILAR IMAGES (still inside right_col) ===
+        # === DISPLAY SIMILAR IMAGES (moved above Grad-CAM for faster perceived load) ===
         if "similar_images" in st.session_state:
             similar_images = st.session_state["similar_images"]
             if similar_images:
-                st.markdown("### Similar Paintings")
+                st.markdown(
+                    "<h3 style='margin: 0.25rem 0 0.75rem'>Similar Paintings</h3>",
+                    unsafe_allow_html=True,
+                )
                 cols = st.columns(5)
                 for idx, sim_img in enumerate(similar_images):
                     with cols[idx % 5]:
                         image_url = sim_img.get("image_url", "")
                         try:
-                            # Try to display the image
                             if image_url:
                                 st.image(image_url, use_container_width=True)
                             else:
                                 st.info("Image not available")
                         except Exception as e:
-                            # If image fails to load, show placeholder
                             st.info("Image not available")
                             print(f"Failed to load image: {image_url}, Error: {e}")
 
                         artist = sim_img.get("artist_name", "Unknown Artist")
                         score = sim_img.get("similarity_score", 0)
                         st.caption(f"{artist}\n({score:.2f})")
+
+        # === MODEL ACTIVATION (Grad-CAM) ===
+        # Title with ultra-tight spacing to tabs
+        st.markdown(
+            "<h3 id='model-activation' style='margin:0;padding:0'>Model Activation</h3>",
+            unsafe_allow_html=True,
+        )
+        # Slightly strengthen tab labels and soften numeric scores in headings
+        st.markdown(
+            """
+            <style>
+            /* Remove vertical spacing added by Streamlit block wrappers around this area */
+            .stVerticalBlock { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+            /* Tighten tab group spacing */
+            .stTabs { margin-top: 0 !important; }
+            .stTabs [role="tablist"] { margin-top: 0 !important; padding-top: 0 !important; }
+            .stTabs [role="tablist"] button[role="tab"] { font-weight: 600; margin-top: 0 !important; }
+            /* Remove heading padding/margin */
+            #model-activation { margin: 0 !important; padding: 0 !important; }
+            .model-activation-title { font-size: 0.95rem; font-weight: 600; margin: 0 0 6px 0; }
+            .model-activation-title .score { opacity: 0.75; font-weight: 500; }
+            .concept-title { font-size: 0.9rem; font-weight: 600; margin: 0 0 6px 0; }
+            .concept-title .score { opacity: 0.75; font-weight: 500; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        tabs = st.tabs(["Art Style", "Visual Elements"])
+
+        session_id = st.session_state.get("session_id")
+        used_api_url = st.session_state.get("used_url")
+        if session_id:
+            # Ensure cache dict
+            if "gradcam_cache" not in st.session_state:
+                st.session_state["gradcam_cache"] = {}
+
+            with tabs[0]:
+                # Style heatmap for the currently selected style
+                current_style = st.session_state.get("selected_genre")
+                if current_style:
+                    cache_key = f"style::{session_id}::{current_style}"
+                    img_bytes = st.session_state["gradcam_cache"].get(cache_key)
+                    if img_bytes is None:
+                        img_bytes = fetch_gradcam_image(
+                            session_id, "style", current_style, used_api_url
+                        )
+                        if img_bytes:
+                            st.session_state["gradcam_cache"][cache_key] = img_bytes
+                    if img_bytes:
+                        # Title above image (smaller) with softer score
+                        style_score = st.session_state.get("predictions", {}).get(
+                            current_style, 0
+                        )
+                        st.markdown(
+                            f"<div class='model-activation-title'>{current_style} "
+                            f"<span class='score'>({style_score:.2f})</span></div>",
+                            unsafe_allow_html=True,
+                        )
+                        _col1, _col2 = st.columns(2)
+                        with _col1:
+                            # Render at half the width of the right column
+                            st.image(img_bytes, use_container_width=True)
+                    else:
+                        st.info("Style heatmap unavailable.")
+                else:
+                    st.info("Select a style to view the heatmap.")
+
+            with tabs[1]:
+                # Top 5 concepts
+                concepts = st.session_state.get("concepts", [])
+                top5 = sorted(
+                    concepts, key=lambda c: c.get("activation", 0), reverse=True
+                )[:5]
+
+                if top5:
+                    cols = st.columns(2)
+                    for idx, c in enumerate(top5):
+                        with cols[idx % 2]:
+                            concept_name = c.get("name", "")
+                            display_name = concept_name.replace("_", " ").title()
+                            cache_key = f"concept::{session_id}::{concept_name}"
+                            img_bytes = st.session_state["gradcam_cache"].get(cache_key)
+                            if img_bytes is None:
+                                img_bytes = fetch_gradcam_image(
+                                    session_id,
+                                    "concept",
+                                    concept_name,
+                                    used_api_url,
+                                )
+                                if img_bytes:
+                                    st.session_state["gradcam_cache"][
+                                        cache_key
+                                    ] = img_bytes
+                            st.markdown(
+                                f"<div class='concept-title'>{display_name} "
+                                f"<span class='score'>({c.get('activation', 0):.2f})</span></div>",
+                                unsafe_allow_html=True,
+                            )
+                            if img_bytes:
+                                st.image(img_bytes, use_container_width=True)
+                            else:
+                                st.info("Heatmap unavailable.")
+                else:
+                    st.info("No visual elements detected.")
+        else:
+            st.info("Heatmaps available after analysis.")
 
 # === FOOTER ===
 st.markdown(f"<hr><small>App version: {APP_VERSION}</small>", unsafe_allow_html=True)
