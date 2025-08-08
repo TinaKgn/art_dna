@@ -9,6 +9,7 @@ from plotly.colors import sample_colorscale
 import streamlit.components.v1 as components
 from urllib.parse import urlparse, quote
 import base64
+from PIL import Image, ImageOps
 
 
 def plotly_rgb_to_hex(rgb_str):
@@ -131,6 +132,29 @@ def concepts_bar_chart(concepts: list):
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
+
+def normalize_image_orientation(image_bytes: bytes) -> tuple[bytes, str | None]:
+    """Apply EXIF-based rotation so images don't appear rotated on mobile.
+    Returns normalized bytes and optional new mime type.
+    """
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img)
+
+        # Prefer JPEG when possible; fall back to PNG for alpha
+        fmt = "JPEG"
+        if img.mode in ("RGBA", "LA"):
+            fmt = "PNG"
+        if fmt == "JPEG" and img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+
+        buf = io.BytesIO()
+        save_kwargs = {"quality": 95} if fmt == "JPEG" else {}
+        img.save(buf, format=fmt, **save_kwargs)
+        return buf.getvalue(), f"image/{fmt.lower()}"
+    except Exception:
+        return image_bytes, None
 
 
 def fetch_genre_descriptions(genres: list[str], audience: str = "adult"):
@@ -272,6 +296,18 @@ main_container = st.container()
 
 with main_container:
     st.title("Art-DNA 🎨")  # Main app title
+    # Global font: Merriweather (elegant serif)
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap');
+        :root { --app-font: 'Merriweather', Georgia, 'Times New Roman', Times, serif; }
+        html, body, .stApp, [class^="css"], [data-testid="stMarkdownContainer"] { font-family: var(--app-font) !important; }
+        h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 { font-family: var(--app-font) !important; font-weight: 700; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown(
         "<h4 style='font-size: 1.4rem; font-weight: 400; font-style: italic;'>Discover the artistic heritage of a painting</h4>",
         unsafe_allow_html=True,
@@ -307,9 +343,12 @@ with main_container:
                 st.session_state.pop("gradcam_cache", None)
 
             st.session_state["uploaded_file"] = uploaded
-            st.session_state["image_bytes"] = uploaded.read()
+            raw_bytes = uploaded.read()
+            norm_bytes, new_mime = normalize_image_orientation(raw_bytes)
+            st.session_state["image_bytes"] = norm_bytes
+            st.session_state["display_image_bytes"] = norm_bytes
             st.session_state["image_name"] = uploaded.name
-            st.session_state["image_type"] = uploaded.type
+            st.session_state["image_type"] = new_mime or uploaded.type
 
         # Restore from session_state
         uploaded_file = st.session_state.get("uploaded_file")
@@ -380,7 +419,8 @@ if uploaded_file and st.session_state.get("analysis_complete", False):
     left_col, right_col = st.columns(2)
 
     with left_col:
-        st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
+        display_img = st.session_state.get("display_image_bytes", uploaded_file)
+        st.image(display_img, caption="Uploaded Image", use_container_width=True)
 
     with right_col:
 
