@@ -1,5 +1,5 @@
 -r ../shared.txt
 plotly
 python-dotenv
-streamlit
+streamlit>=1.30.0
 requests
